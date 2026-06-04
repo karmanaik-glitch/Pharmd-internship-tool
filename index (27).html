@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PharmRound — Ward Rounds</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F8F8F8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PharmRound">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0D0D0D;
+    --brand-soft: #1A1A1A;
+    --accent: #00B37E;
+    --accent-light: #E6F9F2;
+    --accent-dark: #007A54;
+    --warn: #F59E0B;
+    --warn-light: #FEF3C7;
+    --danger: #EF4444;
+    --danger-light: #FEE2E2;
+    --blue: #3B82F6;
+    --blue-light: #EFF6FF;
+    --surface: #FFFFFF;
+    --surface-2: #F8F8F8;
+    --surface-3: #F1F1F1;
+    --border: #E5E5E5;
+    --border-strong: #D1D1D1;
+    --text-primary: #0D0D0D;
+    --text-secondary: #6B6B6B;
+    --text-muted: #A0A0A0;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  /* App Shell */
+  #app { max-width: 430px; margin: 0 auto; min-height: 100vh; position: relative; background: var(--surface-2); }
+
+  /* Top bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-sub { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Bottom nav */
+  .bottomnav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(255,255,255,0.97); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    display: flex; z-index: 50; padding-bottom: env(safe-area-inset-bottom, 8px);
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 0 6px; gap: 3px; cursor: pointer; border: none; background: transparent;
+    color: var(--text-muted); font-size: 10px; font-family: 'DM Sans', sans-serif;
+    transition: color 0.15s; font-weight: 500; letter-spacing: 0.2px;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 22px; height: 22px; stroke-width: 1.8; }
+
+  /* Page container */
+  .page { display: none; padding: 16px 16px 100px; }
+  .page.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .card-pressable {
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .card-pressable:active { transform: scale(0.985); box-shadow: var(--shadow); }
+
+  /* Patient card */
+  .patient-card { padding: 16px; margin-bottom: 12px; }
+  .patient-card .mrd { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .patient-card .name { font-size: 17px; font-weight: 600; margin: 2px 0; letter-spacing: -0.2px; }
+  .patient-card .dx { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 100px; letter-spacing: 0.2px;
+  }
+  .badge-admitted { background: var(--accent-light); color: var(--accent-dark); }
+  .badge-discharge { background: var(--blue-light); color: #1D4ED8; }
+  .badge-dama { background: var(--danger-light); color: #B91C1C; }
+  .badge-transferred { background: var(--warn-light); color: #B45309; }
+  .badge-ward { background: var(--surface-3); color: var(--text-secondary); }
+
+  /* Section headers */
+  .section-label {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin: 20px 0 10px; padding: 0 2px;
+  }
+
+  /* Toggle switch */
+  .toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .toggle-wrap:last-child { border-bottom: none; }
+  .toggle-label { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+  .toggle-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .toggle {
+    position: relative; width: 50px; height: 28px; cursor: pointer;
+    -webkit-user-select: none; user-select: none; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute; inset: 0; background: var(--surface-3);
+    border-radius: 100px; transition: background 0.2s;
+    border: 1.5px solid var(--border-strong);
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: 50%; background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(22px); }
+
+  /* Form elements */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%; padding: 13px 14px; background: var(--surface);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text-primary);
+    outline: none; transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text-muted); }
+  textarea.form-input { resize: none; min-height: 90px; line-height: 1.5; }
+  select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; cursor: pointer; }
+
+  /* Slide-up panel */
+  .panel-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
+  }
+  .panel-overlay.open { display: flex; align-items: flex-end; }
+  .panel-sheet {
+    width: 100%; max-width: 430px; margin: 0 auto;
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    max-height: 92vh; overflow-y: auto; overscroll-behavior: contain;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+  }
+  .panel-overlay.open .panel-sheet { transform: translateY(0); }
+  .panel-handle { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 12px auto 0; }
+  .panel-header { padding: 16px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 19px; font-weight: 600; letter-spacing: -0.3px; }
+  .panel-body { padding: 20px; }
+  .btn-close {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3);
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); flex-shrink: 0;
+  }
+
+  /* Action buttons */
+  .btn-primary {
+    width: 100%; padding: 16px; background: var(--brand); color: white;
+    border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 600; cursor: pointer; letter-spacing: -0.2px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    width: 100%; padding: 14px; background: transparent; color: var(--text-primary);
+    border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-secondary:active { transform: scale(0.98); background: var(--surface-3); }
+  .btn-accent {
+    padding: 12px 20px; background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s; white-space: nowrap;
+  }
+  .btn-accent:active { transform: scale(0.97); }
+
+  /* Detail view */
+  .detail-header {
+    background: var(--brand); color: white; padding: 20px 16px 24px;
+    margin: -16px -16px 16px; position: relative;
+  }
+  .detail-back {
+    display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.7);
+    font-size: 14px; cursor: pointer; margin-bottom: 16px; -webkit-user-select: none; user-select: none;
+  }
+  .detail-mrd { font-family: 'Space Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+  .detail-name { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 6px; }
+  .detail-dx { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.4; }
+
+  /* Stats & Logs */
+  .stats-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 10px; text-align: center; }
+  .stat-val { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+  .stat-key { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  
+  .log-entry { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .log-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 100px; }
+  .chip-yes { background: var(--accent-light); color: var(--accent-dark); }
+  .chip-no { background: var(--surface-3); color: var(--text-muted); }
+  .chip-flag { background: var(--danger-light); color: #B91C1C; }
+  .log-comment { font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; font-style: italic; }
+
+  /* Search & Summary */
+  .search-wrap { position: relative; margin-bottom: 16px; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+  .search-input { width: 100%; padding: 11px 12px 11px 38px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text-primary); outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .summary-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .sum-val { font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .sum-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+  /* Utilities */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--brand); color: white; padding: 12px 20px;
+    border-radius: 100px; font-size: 14px; font-weight: 500;
+    opacity: 0; transition: opacity 0.25s, transform 0.25s;
+    z-index: 200; pointer-events: none; white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  
+  .empty-state { text-align: center; padding: 48px 24px; }
+  .empty-icon { width: 56px; height: 56px; background: var(--surface-3); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .empty-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .empty-sub { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+  .fab {
+    position: fixed; bottom: 80px; right: 16px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--brand); color: white; border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transition: transform 0.15s, box-shadow 0.15s; z-index: 40;
+  }
+  .fab:active { transform: scale(0.93); }
+  @media (min-width: 430px) { .fab { right: calc(50% - 215px + 16px); } }
+
+  .tab-bar { display: flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 3px; gap: 3px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; padding: 9px 4px; text-align: center; font-size: 13px; font-weight: 500; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar" id="topbar">
+    <div>
+      <div class="topbar-title">PharmRound</div>
+      <div class="topbar-sub" id="topbar-date"></div>
+    </div>
+    <div id="topbar-actions"></div>
+  </header>
+
+  <div class="page active" id="page-dashboard">
+    <div class="summary-strip" id="summary-strip">
+      <div class="sum-card">
+        <div class="sum-val" id="stat-admitted">0</div>
+        <div class="sum-label">Active Patients</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="stat-total">0</div>
+        <div class="sum-label">Total Records</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Search MRD, diagnosis…">
+    </div>
+    <div class="section-label">Active Ward Patients</div>
+    <div id="patient-list"></div>
+  </div>
+
+  <div class="page" id="page-records">
+    <div class="section-label">All Patients</div>
+    <div id="all-patient-list"></div>
+  </div>
+
+  <div class="page" id="page-stats">
+    <div class="section-label">Today's Summary</div>
+    <div id="stats-content"></div>
+  </div>
+
+  <div class="page" id="page-detail">
+    <div id="detail-content"></div>
+  </div>
+
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-page="dashboard" onclick="switchPage('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" data-page="records" onclick="switchPage('records',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Records
+    </button>
+    <button class="nav-btn" data-page="stats" onclick="switchPage('stats',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analytics
+    </button>
+  </nav>
+
+  <button class="fab" id="fab-btn" onclick="openAddPatient()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="panel-overlay" id="panel-addpatient">
+  <div class="panel-sheet">
+    <div class="panel-handle"></div>
+    <div class="panel-header">
+      <div class="panel-title">New Patient</div>
+      <button class="btn-close" onclick="closePanel('panel-addpatient')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="new-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">MRD No. <span style="color:var(--danger)">*</span></label>
+        <input class="form-input mono" type="text" id="new-mrd" placeholder="e.g. MRD-2024-001">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Ward / Bed</label>
+          <input class="form-input" type="text" id="new-wardbed" placeholder="e.g. W3-B12">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Age</label>
+          <input class="form-input" type="number" id="new-age" placeholder="yrs" min="0" max="120">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Primary Diagnosis</label>
+        <input class="form-input" type="text" id="new-diagnosis" placeholder="e.g. Type 2 Diabetes Mellitus">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Admission Date</label>
+        <input class="form-input" type="date" id="new-admdate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="new-status">
+          <option value="Admitted">Admitted</option>
+          <option value="Discharge">Discharge</option>
+          <option value="DAMA">DAMA</option>
+          <option value="Transferred">Transferred</option>
+        </select>
+      </div>
+      <div class="form-group" id="new-discharge-wrap" style="display:none;">
+        <label class="form-label">Discharge Date</label>
+        <input class="form-input" type="date" id="new-discharge-date">
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn-primary" onclick="saveNewPatient()">Add Patient</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel-overlay" id="panel-preround">
+  <div class="panel-sheet">
+    <div class="panel-handle"></div>
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Pre-Round Checklist</div>
+        <div id="preround-mrd-label" style="font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-top:2px;"></div>
+      </div>
+      <button class="btn-close" onclick="closePanel('panel-preround')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="pr-date">
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Medication Review</div><div class="toggle-sub">Medicines checked</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-medrv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Clinical Review</div><div class="toggle-sub">Patient status assessed</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-clrv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Intervention Identified</div><div class="toggle-sub">Action required</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-intv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comments</label>
+        <textarea class="form-input" id="pr-comments" placeholder="Notes, observations, follow-up actions…" rows="4"></textarea>
+      </div>
+      <button class="btn-primary" onclick="savePreRound()">Save Checklist</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel-overlay" id="panel-medrec">
+  <div class="panel-sheet">
+    <div class="panel-handle"></div>
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Med. Reconciliation</div>
+        <div id="medrec-mrd-label" style="font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-top:2px;"></div>
+      </div>
+      <button class="btn-close" onclick="closePanel('panel-medrec')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="mr-date">
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Admission Reconciliation</div><div class="toggle-sub">On admission medicines verified</div></div>
+          <label class="toggle"><input type="checkbox" id="mr-adm"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Discharge Reconciliation</div><div class="toggle-sub">Discharge medicines verified</div></div>
+          <label class="toggle"><input type="checkbox" id="mr-dis"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Transfer Reconciliation</div><div class="toggle-sub">Interdept. transfer medicines</div></div>
+          <label class="toggle"><input type="checkbox" id="mr-trans"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Discrepancy Found</div><div class="toggle-sub">Mismatch identified</div></div>
+          <label class="toggle"><input type="checkbox" id="mr-disc" onchange="toggleDiscrepancy(this)"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+      </div>
+      <div id="discrepancy-section" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Discrepancy Type</label>
+          <select class="form-input" id="mr-disctype">
+            <option value="">Select type…</option>
+            <option value="Omission">Omission</option>
+            <option value="Commission">Commission</option>
+            <option value="Wrong Dose">Wrong Dose</option>
+            <option value="Wrong Frequency">Wrong Frequency</option>
+            <option value="Wrong Drug">Wrong Drug</option>
+            <option value="Duplication">Duplication</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Action Taken</label>
+        <textarea class="form-input" id="mr-action" placeholder="Describe the action taken, interventions made…" rows="4"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveMedRec()">Save Reconciliation</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel-overlay" id="panel-editstatus">
+  <div class="panel-sheet">
+    <div class="panel-handle"></div>
+    <div class="panel-header">
+      <div class="panel-title">Update Status</div>
+      <button class="btn-close" onclick="closePanel('panel-editstatus')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="panel-body">
+      <div id="edit-patient-info" style="margin-bottom:16px;padding:14px;background:var(--surface-2);border-radius:var(--radius-sm);"></div>
+      <div class="form-group">
+        <label class="form-label">New Status</label>
+        <select class="form-input" id="edit-status" onchange="onEditStatusChange(this)">
+          <option value="Admitted">Admitted</option>
+          <option value="Discharge">Discharge</option>
+          <option value="DAMA">DAMA</option>
+          <option value="Transferred">Transferred</option>
+        </select>
+      </div>
+      <div class="form-group" id="edit-discharge-wrap" style="display:none;">
+        <label class="form-label">Discharge Date</label>
+        <input class="form-input" type="date" id="edit-discharge-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ward / Bed</label>
+        <input class="form-input" type="text" id="edit-wardbed" placeholder="e.g. W3-B12">
+      </div>
+      <button class="btn-primary" onclick="saveEditStatus()">Update Patient</button>
+    </div>
+  </div>
+</div>
+<script>
+// ===================== PWA SERVICE WORKER =====================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(registration => console.log('ServiceWorker registered'))
+      .catch(err => console.log('ServiceWorker registration failed: ', err));
+  });
+}
+
+// ===================== DATABASE CONFIG =====================
+// PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+const API_URL = "https://script.google.com/macros/s/AKfycbyxsu5JUKZZ700YUFEZ7CT2qTOIReBqx59KqrF3ttiHFxnVuWDJ1SNH1jXI-XJuGhI9/exec";
+
+// ===================== DATA STORE =====================
+const DB = {
+  patients: [],
+  preRound: [],
+  medRec: []
+};
+
+// ===================== CLOUD SYNC LOGIC =====================
+async function fetchInitialData() {
+  try {
+    const response = await fetch(API_URL);
+    const data = await response.json();
+    DB.patients = data.patients || [];
+    DB.preRound = data.preRounds || [];
+    DB.medRec = data.medRecs || [];
+    
+    renderDashboard();
+    if (activePage === 'records') renderRecords();
+    if (activePage === 'stats') renderStats();
+  } catch (error) {
+    console.error("Error loading data:", error);
+    showToast("Error connecting to database");
+  }
+}
+
+async function sendDataToBackend(action, dataObj) {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, data: dataObj })
+    });
+  } catch (error) {
+    console.error("Failed to save:", error);
+    showToast("Cloud sync failed!");
+  }
+}
+
+// ===================== STATE =====================
+let activePage = 'dashboard';
+let selectedMRD = null;
+let editingMRD = null;
+let detailTab = 'preround';
+
+// ===================== UTILS =====================
+function today() { return new Date().toISOString().split('T')[0]; }
+function formatDate(d) {
+  if (!d) return '—';
+  // Handle Google sheets date format splitting
+  const dateStr = d.includes('T') ? d.split('T')[0] : d; 
+  const dt = new Date(dateStr + 'T00:00:00');
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function statusBadge(s) {
+  const map = { Admitted:'badge-admitted', Discharge:'badge-discharge', DAMA:'badge-dama', Transferred:'badge-transferred' };
+  const icons = { Admitted:'●', Discharge:'◉', DAMA:'✕', Transferred:'→' };
+  return `<span class="badge ${map[s]||'badge-admitted'}">${icons[s]||''} ${s}</span>`;
+}
+function getAdmissionDays(admDate) {
+  if (!admDate) return '—';
+  const dateStr = admDate.includes('T') ? admDate.split('T')[0] : admDate;
+  const diff = Math.floor((new Date() - new Date(dateStr+'T00:00:00')) / 86400000);
+  return diff < 0 ? '0' : diff;
+}
+
+// ===================== PAGE ROUTING =====================
+function switchPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (btn) btn.classList.add('active');
+  activePage = page;
+  const fab = document.getElementById('fab-btn');
+  fab.style.display = (page === 'detail') ? 'none' : 'flex';
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'records') renderRecords();
+  if (page === 'stats') renderStats();
+}
+
+function openDetail(mrd) {
+  selectedMRD = mrd;
+  detailTab = 'preround';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+  activePage = 'detail';
+  document.getElementById('fab-btn').style.display = 'none';
+  renderDetail(mrd);
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  const admitted = DB.patients.filter(p => p.Status === 'Admitted');
+  document.getElementById('stat-admitted').textContent = admitted.length;
+  document.getElementById('stat-total').textContent = DB.patients.length;
+
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const filtered = admitted.filter(p =>
+    p.MRD_NO.toLowerCase().includes(q) ||
+    p.Primary_Diagnosis.toLowerCase().includes(q) ||
+    (p.Ward_Bed||'').toLowerCase().includes(q)
+  );
+
+  const list = document.getElementById('patient-list');
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="empty-title">No active patients</div>
+      <div class="empty-sub">Tap + to add a patient to the ward round</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((p, i) => {
+    const prEntries = DB.preRound.filter(x => x.MRD_NO === p.MRD_NO);
+    const mrEntries = DB.medRec.filter(x => x.MRD_NO === p.MRD_NO);
+    // Handle date formatting from Google Sheets
+    let todayStr = today();
+    const todayPR = prEntries.find(x => x.Date && x.Date.includes(todayStr));
+    const days = getAdmissionDays(p.Admission_Date);
+    
+    // Google Sheets returns TRUE/FALSE as strings or booleans depending on settings
+    const hasDisc = mrEntries.some(x => String(x.Discrepancy_Found).toLowerCase() === 'true');
+    
+    return `<div class="card card-pressable patient-card" style="animation-delay:${i*0.04}s" onclick="openDetail('${p.MRD_NO}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div class="mrd">${p.MRD_NO}</div>
+          <div class="name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.Primary_Diagnosis}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            ${p.Ward_Bed ? `<span class="badge badge-ward">🛏 ${p.Ward_Bed}</span>` : ''}
+            <span style="font-size:12px;color:var(--text-muted);">Age ${p.Age || '—'}</span>
+            <span style="font-size:12px;color:var(--text-muted);">${days}d admitted</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          ${hasDisc ? `<span class="badge" style="background:var(--danger-light);color:#B91C1C;">⚠ Discrepancy</span>` : ''}
+          ${todayPR ? `<span class="badge badge-admitted">✓ Reviewed</span>` : `<span class="badge" style="background:var(--warn-light);color:#B45309;">Pending</span>`}
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;display:flex;gap:16px;">
+        <div style="font-size:12px;color:var(--text-muted);">Pre-round: <strong style="color:var(--text-primary)">${prEntries.length}</strong></div>
+        <div style="font-size:12px;color:var(--text-muted);">Med-rec: <strong style="color:var(--text-primary)">${mrEntries.length}</strong></div>
+        <div style="margin-left:auto;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== RECORDS & STATS =====================
+function renderRecords() {
+  const list = document.getElementById('all-patient-list');
+  const statuses = ['Admitted', 'Discharge', 'DAMA', 'Transferred'];
+  let html = '';
+  statuses.forEach(status => {
+    const pts = DB.patients.filter(p => p.Status === status);
+    if (pts.length === 0) return;
+    html += `<div class="section-label">${status} (${pts.length})</div>`;
+    pts.forEach(p => {
+      html += `<div class="card card-pressable patient-card" onclick="openDetail('${p.MRD_NO}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="flex:1;min-width:0;">
+            <div class="mrd">${p.MRD_NO}</div>
+            <div class="name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.Primary_Diagnosis}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Adm: ${formatDate(p.Admission_Date)}${p.Discharge_Date?' · Dis: '+formatDate(p.Discharge_Date):''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            ${statusBadge(status)}
+            ${p.Ward_Bed?`<span class="badge badge-ward">${p.Ward_Bed}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  if (!html) html = `<div class="empty-state"><div class="empty-title">No records yet</div></div>`;
+  list.innerHTML = html;
+}
+
+function renderStats() {
+  const total = DB.patients.length;
+  const admitted = DB.patients.filter(p => p.Status === 'Admitted').length;
+  const discharged = DB.patients.filter(p => p.Status === 'Discharge').length;
+  const dama = DB.patients.filter(p => p.Status === 'DAMA').length;
+  const transferred = DB.patients.filter(p => p.Status === 'Transferred').length;
+
+  let todayStr = today();
+  const todayPR = DB.preRound.filter(x => x.Date && x.Date.includes(todayStr)).length;
+  const todayMR = DB.medRec.filter(x => x.Date && x.Date.includes(todayStr)).length;
+
+  document.getElementById('stats-content').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="sum-card"><div class="sum-val" style="color:var(--accent)">${admitted}</div><div class="sum-label">Active</div></div>
+      <div class="sum-card"><div class="sum-val">${total}</div><div class="sum-label">Total Patients</div></div>
+      <div class="sum-card"><div class="sum-val" style="color:var(--blue)">${discharged}</div><div class="sum-label">Discharged</div></div>
+      <div class="sum-card"><div class="sum-val" style="color:var(--warn)">${dama + transferred}</div><div class="sum-label">DAMA / Transfer</div></div>
+    </div>
+    <div class="section-label">Today's Activity</div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="text-align:center;">
+          <div style="font-size:28px;font-weight:700;letter-spacing:-1px;">${todayPR}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pre-Round Entries</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:28px;font-weight:700;letter-spacing:-1px;">${todayMR}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Med Rec Entries</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== DETAIL VIEW =====================
+function renderDetail(mrd) {
+  const patient = DB.patients.find(p => p.MRD_NO === mrd);
+  if (!patient) return;
+  const prEntries = DB.preRound.filter(x => x.MRD_NO === mrd).sort((a,b) => String(b.Date).localeCompare(String(a.Date)));
+  const mrEntries = DB.medRec.filter(x => x.MRD_NO === mrd).sort((a,b) => String(b.Date).localeCompare(String(a.Date)));
+  const days = getAdmissionDays(patient.Admission_Date);
+  const isActive = patient.Status === 'Admitted';
+
+  const preRoundHtml = prEntries.length === 0 ? `<div class="empty-state" style="padding:32px 16px;"><div class="empty-title" style="font-size:15px;">No pre-round entries</div></div>` :
+    prEntries.map(e => `
+      <div class="log-entry">
+        <div class="log-date">${formatDate(e.Date)}</div>
+        <div class="log-chips">
+          <span class="chip ${String(e.Medication_review).toLowerCase()==='true'?'chip-yes':'chip-no'}">💊 Med Review ${String(e.Medication_review).toLowerCase()==='true'?'✓':'✗'}</span>
+          <span class="chip ${String(e.Clinical_review).toLowerCase()==='true'?'chip-yes':'chip-no'}">🩺 Clinical ${String(e.Clinical_review).toLowerCase()==='true'?'✓':'✗'}</span>
+          <span class="chip ${String(e.Intervention_identified).toLowerCase()==='true'?'chip-flag':'chip-no'}">⚡ Intervention ${String(e.Intervention_identified).toLowerCase()==='true'?'Yes':'No'}</span>
+        </div>
+        ${e.Comments ? `<div class="log-comment">${e.Comments}</div>` : ''}
+      </div>`).join('');
+
+  const medRecHtml = mrEntries.length === 0 ? `<div class="empty-state" style="padding:32px 16px;"><div class="empty-title" style="font-size:15px;">No reconciliation entries</div></div>` :
+    mrEntries.map(e => `
+      <div class="log-entry">
+        <div class="log-date">${formatDate(e.Date)}</div>
+        <div class="log-chips">
+          <span class="chip ${String(e.Admission_medicine_reconciliation).toLowerCase()==='true'?'chip-yes':'chip-no'}">Admission ${String(e.Admission_medicine_reconciliation).toLowerCase()==='true'?'✓':'✗'}</span>
+          <span class="chip ${String(e.Discharge_medicine_reconciliation).toLowerCase()==='true'?'chip-yes':'chip-no'}">Discharge ${String(e.Discharge_medicine_reconciliation).toLowerCase()==='true'?'✓':'✗'}</span>
+          <span class="chip ${String(e.Interdepartment_Transfer_Medicine_Reconciliation).toLowerCase()==='true'?'chip-yes':'chip-no'}">Transfer ${String(e.Interdepartment_Transfer_Medicine_Reconciliation).toLowerCase()==='true'?'✓':'✗'}</span>
+          ${String(e.Discrepancy_Found).toLowerCase()==='true' ? `<span class="chip chip-flag">⚠ ${e.Discrepancy_type||'Discrepancy'}</span>` : '<span class="chip chip-no">No Discrepancy</span>'}
+        </div>
+        ${e.Action_taken ? `<div class="log-comment">${e.Action_taken}</div>` : ''}
+      </div>`).join('');
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-back" onclick="goBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Back
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <div class="detail-mrd">${patient.MRD_NO}</div>
+          <div class="detail-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${patient.Primary_Diagnosis}</div>
+          <div class="detail-dx">Age ${patient.Age||'—'} · Adm ${formatDate(patient.Admission_Date)}</div>
+        </div>
+        <div>${statusBadge(patient.Status)}</div>
+      </div>
+    </div>
+    <div class="stats-strip">
+      <div class="stat-card"><div class="stat-val">${days}<span style="font-size:12px;font-weight:400;">d</span></div><div class="stat-key">LOS</div></div>
+      <div class="stat-card"><div class="stat-val">${prEntries.length}</div><div class="stat-key">Pre-Round</div></div>
+      <div class="stat-card"><div class="stat-val">${mrEntries.length}</div><div class="stat-key">Med Rec</div></div>
+    </div>
+    ${patient.Ward_Bed ? `<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);"><span style="font-size:14px;color:var(--text-secondary);">Ward / Bed:</span> <span style="font-size:14px;font-weight:600;">${patient.Ward_Bed}</span></div>` : ''}
+    
+    ${isActive ? `
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <button class="btn-accent" style="flex:1;" onclick="openPreRound('${mrd}')">Pre-Round</button>
+      <button class="btn-accent" style="flex:1;background:var(--brand);" onclick="openMedRec('${mrd}')">Med Rec</button>
+    </div>
+    <button class="btn-secondary" style="margin-bottom:16px;" onclick="openEditStatus('${mrd}')">Update Status / Discharge</button>
+    ` : `
+    <div style="padding:12px 14px;background:var(--surface-3);border-radius:var(--radius-sm);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:13px;color:var(--text-secondary);">${patient.Discharge_Date ? 'Discharged: ' + formatDate(patient.Discharge_Date) : 'Status: ' + patient.Status}</span>
+    </div>`}
+
+    <div class="tab-bar">
+      <button class="tab-btn ${detailTab==='preround'?'active':''}" onclick="switchDetailTab('preround')">Pre-Round (${prEntries.length})</button>
+      <button class="tab-btn ${detailTab==='medrec'?'active':''}" onclick="switchDetailTab('medrec')">Med Rec (${mrEntries.length})</button>
+    </div>
+    <div class="card" id="detail-tab-content">
+      ${detailTab === 'preround' ? preRoundHtml : medRecHtml}
+    </div>
+  `;
+}
+
+function switchDetailTab(tab) { detailTab = tab; renderDetail(selectedMRD); }
+function goBack() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const prevPage = (activePage === 'detail') ? 'dashboard' : activePage;
+  document.getElementById('page-' + prevPage).classList.add('active');
+  document.getElementById('fab-btn').style.display = 'flex';
+  document.querySelectorAll('.nav-btn').forEach(b => { if (b.dataset.page === prevPage) b.classList.add('active'); else b.classList.remove('active'); });
+  activePage = prevPage;
+  if (prevPage === 'dashboard') renderDashboard();
+  if (prevPage === 'records') renderRecords();
+}
+
+// ===================== PANEL HELPERS =====================
+function openPanel(id) { const o = document.getElementById(id); o.style.display = 'flex'; requestAnimationFrame(() => o.classList.add('open')); document.body.style.overflow = 'hidden'; }
+function closePanel(id) { const o = document.getElementById(id); o.classList.remove('open'); setTimeout(() => { o.style.display = 'none'; document.body.style.overflow = ''; }, 350); }
+document.querySelectorAll('.panel-overlay').forEach(o => { o.addEventListener('click', e => { if (e.target === o) closePanel(o.id); }); });
+
+// ===================== CRUD OPERATIONS WITH API SYNC =====================
+async function saveNewPatient() {
+  const mrd = document.getElementById('new-mrd').value.trim();
+  if (!mrd) { showToast('MRD No. is required'); return; }
+  if (DB.patients.find(p => p.MRD_NO === mrd)) { showToast('MRD No. already exists'); return; }
+  const status = document.getElementById('new-status').value;
+  
+  const newPatientData = {
+    Date: document.getElementById('new-date').value,
+    MRD_NO: mrd,
+    Ward_Bed: document.getElementById('new-wardbed').value.trim(),
+    Age: parseInt(document.getElementById('new-age').value)||'',
+    Primary_Diagnosis: document.getElementById('new-diagnosis').value.trim() || 'Unspecified',
+    Admission_Date: document.getElementById('new-admdate').value,
+    Discharge_Date: (status !== 'Admitted') ? document.getElementById('new-discharge-date').value : '',
+    Status: status
+  };
+
+  DB.patients.push(newPatientData); // Optimistic UI update
+  closePanel('panel-addpatient');
+  renderDashboard();
+  showToast('Patient added ✓');
+  
+  // Send to Google Sheets
+  await sendDataToBackend('addPatient', newPatientData);
+}
+
+function openAddPatient() {
+  document.getElementById('new-date').value = today();
+  document.getElementById('new-mrd').value = '';
+  document.getElementById('new-wardbed').value = '';
+  document.getElementById('new-age').value = '';
+  document.getElementById('new-diagnosis').value = '';
+  document.getElementById('new-admdate').value = today();
+  document.getElementById('new-status').value = 'Admitted';
+  document.getElementById('new-discharge-wrap').style.display = 'none';
+  openPanel('panel-addpatient');
+  document.getElementById('new-status').onchange = function() {
+    document.getElementById('new-discharge-wrap').style.display = (this.value !== 'Admitted') ? 'block' : 'none';
+    if (this.value !== 'Admitted') document.getElementById('new-discharge-date').value = today();
+  };
+}
+
+function openPreRound(mrd) {
+  selectedMRD = mrd;
+  document.getElementById('preround-mrd-label').textContent = mrd;
+  document.getElementById('pr-date').value = today();
+  ['pr-medrv', 'pr-clrv', 'pr-intv'].forEach(id => document.getElementById(id).checked = false);
+  document.getElementById('pr-comments').value = '';
+  openPanel('panel-preround');
+}
+
+async function savePreRound() {
+  const prData = {
+    Date: document.getElementById('pr-date').value,
+    MRD_NO: selectedMRD,
+    Medication_review: document.getElementById('pr-medrv').checked,
+    Clinical_review: document.getElementById('pr-clrv').checked,
+    Intervention_identified: document.getElementById('pr-intv').checked,
+    Comments: document.getElementById('pr-comments').value.trim()
+  };
+
+  DB.preRound.push(prData);
+  closePanel('panel-preround');
+  renderDetail(selectedMRD);
+  renderDashboard();
+  showToast('Checklist saved ✓');
+
+  await sendDataToBackend('addPreRound', prData);
+}
+
+function openMedRec(mrd) {
+  selectedMRD = mrd;
+  document.getElementById('medrec-mrd-label').textContent = mrd;
+  document.getElementById('mr-date').value = today();
+  ['mr-adm', 'mr-dis', 'mr-trans', 'mr-disc'].forEach(id => document.getElementById(id).checked = false);
+  document.getElementById('mr-disctype').value = '';
+  document.getElementById('mr-action').value = '';
+  document.getElementById('discrepancy-section').style.display = 'none';
+  openPanel('panel-medrec');
+}
+
+function toggleDiscrepancy(el) { document.getElementById('discrepancy-section').style.display = el.checked ? 'block' : 'none'; }
+
+async function saveMedRec() {
+  const disc = document.getElementById('mr-disc').checked;
+  const mrData = {
+    Date: document.getElementById('mr-date').value,
+    MRD_NO: selectedMRD,
+    Admission_medicine_reconciliation: document.getElementById('mr-adm').checked,
+    Discharge_medicine_reconciliation: document.getElementById('mr-dis').checked,
+    Interdepartment_Transfer_Medicine_Reconciliation: document.getElementById('mr-trans').checked,
+    Discrepancy_Found: disc,
+    Discrepancy_type: disc ? document.getElementById('mr-disctype').value : '',
+    Action_taken: document.getElementById('mr-action').value.trim()
+  };
+
+  DB.medRec.push(mrData);
+  closePanel('panel-medrec');
+  renderDetail(selectedMRD);
+  renderDashboard();
+  showToast('Med rec saved ✓');
+
+  await sendDataToBackend('addMedRec', mrData);
+}
+
+function openEditStatus(mrd) {
+  editingMRD = mrd;
+  const patient = DB.patients.find(p => p.MRD_NO === mrd);
+  document.getElementById('edit-patient-info').innerHTML = `<div style="font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;">${patient.MRD_NO}</div><div style="font-size:15px;font-weight:600;margin-top:2px;">${patient.Primary_Diagnosis}</div>`;
+  document.getElementById('edit-status').value = patient.Status;
+  document.getElementById('edit-wardbed').value = patient.Ward_Bed || '';
+  document.getElementById('edit-discharge-wrap').style.display = (patient.Status !== 'Admitted') ? 'block' : 'none';
+  document.getElementById('edit-discharge-date').value = patient.Discharge_Date || today();
+  openPanel('panel-editstatus');
+}
+
+function onEditStatusChange(el) {
+  const wrap = document.getElementById('edit-discharge-wrap');
+  if (el.value !== 'Admitted') {
+    wrap.style.display = 'block';
+    if (!document.getElementById('edit-discharge-date').value) document.getElementById('edit-discharge-date').value = today();
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+async function saveEditStatus() {
+  const patient = DB.patients.find(p => p.MRD_NO === editingMRD);
+  const newStatus = document.getElementById('edit-status').value;
+  
+  patient.Status = newStatus;
+  patient.Ward_Bed = document.getElementById('edit-wardbed').value.trim();
+  patient.Discharge_Date = (newStatus !== 'Admitted') ? (document.getElementById('edit-discharge-date').value || today()) : '';
+  
+  closePanel('panel-editstatus');
+  renderDetail(editingMRD);
+  
+  if (newStatus !== 'Admitted') {
+    showToast(`Patient discharged ✓`);
+    setTimeout(() => { goBack(); renderDashboard(); }, 600);
+  } else {
+    showToast('Status updated ✓');
+  }
+
+  // Tell Google Sheet about the discharge/status change
+  await sendDataToBackend('updateDischarge', {
+      MRD_NO: editingMRD,
+      Status: patient.Status,
+      Discharge_Date: patient.Discharge_Date
+  });
+}
+
+// Search
+document.getElementById('search-input').addEventListener('input', renderDashboard);
+
+// INIT
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+
+// Start the app by grabbing data from Google Sheets!
+fetchInitialData();
+
+</script>
+</body>
+</html>
