@@ -1092,10 +1092,13 @@ function renderStats() {
 //  DETAIL VIEW
 // ══════════════════════════════════════════
 function renderDetail(mrd) {
-  const patient  = DB.patients.find(p => p.MRD_NO === mrd);
+  // Safely compare by converting both to strings and trimming spaces
+  const safeMrd = String(mrd).trim();
+  const patient = DB.patients.find(p => String(p.MRD_NO).trim() === safeMrd);
   if (!patient) { goBack(); return; }
-  const prEntries = DB.preRound.filter(x => x.MRD_NO === mrd).sort((a,b) => b.Date.localeCompare(a.Date));
-  const mrEntries = DB.medRec.filter(x => x.MRD_NO === mrd).sort((a,b) => b.Date.localeCompare(a.Date));
+  
+  const prEntries = DB.preRound.filter(x => String(x.MRD_NO).trim() === safeMrd).sort((a,b) => b.Date.localeCompare(a.Date));
+  const mrEntries = DB.medRec.filter(x => String(x.MRD_NO).trim() === safeMrd).sort((a,b) => b.Date.localeCompare(a.Date));  
   const days      = losdays(patient.Admission_Date);
   const isActive  = patient.Status === 'Admitted';
 
@@ -1332,7 +1335,8 @@ function saveMedRec() {
 // ══════════════════════════════════════════
 function openEditStatus(mrd) {
   editingMRD = mrd;
-  const p = DB.patients.find(x => x.MRD_NO === mrd);
+  const patientMrd = String(mrd).trim();
+  const p = DB.patients.find(x => String(x.MRD_NO).trim() === patientMrd);
   document.getElementById('edit-patient-info').innerHTML = `
     <div style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:2px">${esc(p.MRD_NO)}</div>
     <div style="font-size:13px;color:var(--text-secondary)">Adm ${formatDate(p.Admission_Date)}</div>`;
@@ -1351,7 +1355,8 @@ function onEditStatusChange(el) {
     document.getElementById('edit-discharge-date').value = todayStr();
 }
 function saveEditStatus() {
-  const p          = DB.patients.find(x => x.MRD_NO === editingMRD);
+  const patientMrd = String(editingMRD).trim();
+  const p          = DB.patients.find(x => String(x.MRD_NO).trim() === patientMrd);  
   const prevStatus = p.Status;
   const newStatus  = document.getElementById('edit-status').value;
   
@@ -1372,15 +1377,16 @@ function saveEditStatus() {
   }
 }
 function confirmDeletePatient() {
-  const p = DB.patients.find(x => x.MRD_NO === editingMRD);
+  const patientMrd = String(editingMRD).trim();
+  const p = DB.patients.find(x => String(x.MRD_NO).trim() === patientMrd);
   showConfirm(
     'Remove Patient Record',
     `This will permanently delete ${p.MRD_NO} and all associated checklists and reconciliation entries. This cannot be undone.`,
     'Delete',
     () => {
-      DB.patients  = DB.patients.filter(x => x.MRD_NO !== editingMRD);
-      DB.preRound  = DB.preRound.filter(x => x.MRD_NO !== editingMRD);
-      DB.medRec    = DB.medRec.filter(x => x.MRD_NO !== editingMRD);
+      DB.patients  = DB.patients.filter(x => String(x.MRD_NO).trim() !== patientMrd);
+      DB.preRound  = DB.preRound.filter(x => String(x.MRD_NO).trim() !== patientMrd);
+      DB.medRec    = DB.medRec.filter(x => String(x.MRD_NO).trim() !== patientMrd);      
       DB.save();
       DB.enqueue({ type:'delete', table:'all', data:{ MRD_NO: editingMRD } });
       closePanel('panel-editstatus');
