@@ -1,21 +1,24 @@
 {
-  "name": "Clinical Pharmacist Ward Rounds",
+  "name": "PharmRound Offline Tracker",
   "short_name": "PharmRound",
+  "description": "Offline-first clinical ward round and medicine reconciliation tracker.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#F8F8F8",
-  "theme_color": "#F8F8F8",
-  "description": "Mobile application for daily hospital ward rounds and medication reconciliation.",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1E3A8A",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
+      "type": "image/png",
       "sizes": "192x192",
-      "type": "image/png"
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
+      "type": "image/png",
       "sizes": "512x512",
-      "type": "image/png"
+      "purpose": "any maskable"
     }
   ]
 }
