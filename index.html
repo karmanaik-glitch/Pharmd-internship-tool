@@ -695,26 +695,6 @@ const DB = {
   }
 };
 
-// Seed DB
-if (DB.patients.length === 0 && !localStorage.getItem('pr_seeded')) {
-  const td = todayStr();
-  const yd = offsetDate(-1);
-  DB.patients = [
-    { Date: td, MRD_NO:'MRD-2024-001', Ward_Bed:'W2-B04', Age:58, Primary_Diagnosis:'Type 2 Diabetes with Hypertension', Admission_Date:yd, Discharge_Date:'', Status:'Admitted' },
-    { Date: td, MRD_NO:'MRD-2024-002', Ward_Bed:'W3-B11', Age:72, Primary_Diagnosis:'COPD Exacerbation', Admission_Date:yd, Discharge_Date:'', Status:'Admitted' },
-    { Date: td, MRD_NO:'MRD-2024-003', Ward_Bed:'W1-B07', Age:45, Primary_Diagnosis:'Acute Myocardial Infarction', Admission_Date:yd, Discharge_Date:'', Status:'Admitted' },
-    { Date: yd, MRD_NO:'MRD-2024-004', Ward_Bed:'', Age:63, Primary_Diagnosis:'Community-acquired Pneumonia', Admission_Date:offsetDate(-3), Discharge_Date:yd, Status:'Discharge' },
-  ];
-  DB.preRound = [
-    { Date: td, MRD_NO:'MRD-2024-001', Medication_review:true, Clinical_review:true, Intervention_identified:false, Comments:'Metformin dose adjusted per eGFR — hold if <30.' },
-    { Date: yd,  MRD_NO:'MRD-2024-002', Medication_review:true, Clinical_review:false, Intervention_identified:true, Comments:'Theophylline serum levels ordered.' },
-  ];
-  DB.medRec = [
-    { Date: td, MRD_NO:'MRD-2024-001', Admission_medicine_reconciliation:true, Discharge_medicine_reconciliation:false, Interdepartment_Transfer_Medicine_Reconciliation:false, Discrepancy_Found:true, Discrepancy_type:'Wrong Dose', Action_taken:'Corrected insulin dose 20u→14u. Prescriber informed.' },
-  ];
-  DB.save();
-  localStorage.setItem('pr_seeded', '1');
-}
 
 // ══════════════════════════════════════════
 //  STATE
