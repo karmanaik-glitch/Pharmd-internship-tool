@@ -643,7 +643,6 @@ const DB = {
   },
 
   enqueue(op) {
-    // Adds a unique ID and timestamp to each transaction
     this.queue.push({ 
       ...op, 
       timestamp: Date.now(), 
@@ -652,12 +651,10 @@ const DB = {
     this.save();
     updateQueueUI();
     
-    // Automatically attempt to sync if online
     if (navigator.onLine) this.flushQueue();
   },
 
   async flushQueue() {
-    // Guard clauses: Don't sync if empty, offline, or URL is missing
     if (!this.queue.length || !navigator.onLine) return;
     if (!API_URL || API_URL === "PASTE_YOUR_URL_HERE") {
       showToast("API URL is not configured", "error");
@@ -667,7 +664,6 @@ const DB = {
     setBanner('syncing', `Syncing ${this.queue.length} pending entries…`);
 
     try {
-      // Send the entire queue array to your server
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -678,7 +674,6 @@ const DB = {
 
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-      // If the backend processed it successfully, clear the local queue
       this.queue = [];
       this.save();
       
@@ -716,12 +711,14 @@ function offsetDate(days) {
 function formatDate(d) {
   if (!d) return '—';
   const dt = new Date(d + 'T00:00:00');
+  if(isNaN(dt.getTime())) return String(d); // Fallback if string isn't an exact date
   return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
 }
 function losdays(admDate) {
   if (!admDate) return '—';
   const today = new Date(todayStr());
   const adm = new Date(admDate);
+  if(isNaN(adm.getTime())) return '—'; 
   const diff = Math.floor((today - adm) / 86400000);
   return diff < 0 ? 0 : diff;
 }
@@ -885,10 +882,12 @@ function renderDashboard() {
   document.getElementById('stat-today-pr').textContent   = todayReviewed;
 
   const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+  
+  // FIX: Wrapping the properties in String() to prevent "toLowerCase is not a function" crashes
   const filtered = admitted.filter(p =>
-    p.MRD_NO.toLowerCase().includes(q) ||
-    p.Primary_Diagnosis.toLowerCase().includes(q) ||
-    (p.Ward_Bed||'').toLowerCase().includes(q)
+    String(p.MRD_NO || '').toLowerCase().includes(q) ||
+    String(p.Primary_Diagnosis || '').toLowerCase().includes(q) ||
+    String(p.Ward_Bed || '').toLowerCase().includes(q)
   );
 
   const list = document.getElementById('patient-list');
@@ -940,8 +939,14 @@ function renderDashboard() {
 function renderRecords() {
   const list = document.getElementById('all-patient-list');
   const q = (document.getElementById('rec-search').value || '').trim().toLowerCase();
+  
+  // FIX: Wrapping the properties in String() to prevent "toLowerCase is not a function" crashes
   const all = q
-    ? DB.patients.filter(p => p.MRD_NO.toLowerCase().includes(q) || p.Primary_Diagnosis.toLowerCase().includes(q) || (p.Ward_Bed||'').toLowerCase().includes(q))
+    ? DB.patients.filter(p => 
+        String(p.MRD_NO || '').toLowerCase().includes(q) || 
+        String(p.Primary_Diagnosis || '').toLowerCase().includes(q) || 
+        String(p.Ward_Bed || '').toLowerCase().includes(q)
+      )
     : DB.patients;
 
   if (!all.length) {
@@ -1491,6 +1496,8 @@ document.addEventListener('visibilitychange', () => {
 //  INIT
 // ══════════════════════════════════════════
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+
+// Render the dashboard immediately with whatever is in local storage
 renderDashboard();
 
 if (navigator.onLine && DB.queue.length > 0) {
