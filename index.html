@@ -9,6 +9,7 @@
 <title>PharmRound</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="./manifest.json">
 <style>
 :root{
   /* Updated to more user-friendly, modern medical colors */
@@ -670,8 +671,6 @@ const DB = {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          // 'text/plain' is often used for Google Apps Script to bypass strict CORS preflight checks, 
-          // but the payload remains valid stringified JSON.
           'Content-Type': 'text/plain;charset=utf-8', 
         },
         body: JSON.stringify({ operations: this.queue })
@@ -690,11 +689,9 @@ const DB = {
     } catch (error) {
       console.error('Sync failed:', error);
       setBanner('offline', '⚠ Sync failed — will retry later');
-      // The queue remains intact in localStorage and will retry on next load or network reconnect
     }
   }
 };
-
 
 // ══════════════════════════════════════════
 //  STATE
@@ -1447,18 +1444,9 @@ function exportIndexCSV() {
 }
 
 // ══════════════════════════════════════════
-//  AUTO-SYNC ON FOCUS
-// ══════════════════════════════════════════
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && navigator.onLine && DB.queue.length > 0) DB.flushQueue();
-});
-
-// ══════════════════════════════════════════
 //  MULTI-DEVICE SYNC (FETCH FROM SERVER)
 // ══════════════════════════════════════════
 async function fetchServerData() {
-  // Only fetch if online, URL is set, and the offline queue is empty 
-  // (we don't want to overwrite local changes that haven't been pushed yet)
   if (!navigator.onLine || !API_URL || API_URL === "PASTE_YOUR_URL_HERE" || DB.queue.length > 0) return;
 
   setBanner('syncing', 'Downloading latest records from Sheets...');
@@ -1469,16 +1457,12 @@ async function fetchServerData() {
     
     const data = await response.json();
     
-    // Google Sheets returns empty arrays if the sheet is blank, 
-    // so we only update if we actually get valid data back.
     if (data.patients) DB.patients = data.patients;
     if (data.preRounds) DB.preRound = data.preRounds;
     if (data.medRecs) DB.medRec = data.medRecs;
     
-    // Save the fresh server data to local storage
     DB.save();
     
-    // Re-render the UI with the new data
     if (activePage === 'dashboard') renderDashboard();
     if (activePage === 'records') renderRecords();
     if (activePage === 'stats') renderStats();
@@ -1494,18 +1478,40 @@ async function fetchServerData() {
 }
 
 // ══════════════════════════════════════════
+//  AUTO-SYNC ON FOCUS
+// ══════════════════════════════════════════
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && navigator.onLine) {
+    if (DB.queue.length > 0) DB.flushQueue();
+    else fetchServerData(); // Fetch if there's no pending upload
+  }
+});
+
+// ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 renderDashboard();
 
-// 1. Flush any pending offline uploads first
 if (navigator.onLine && DB.queue.length > 0) {
   setTimeout(() => DB.flushQueue(), 1000);
-} 
-// 2. Or, if the queue is empty, download the latest data from other devices
-else {
+} else {
   fetchServerData();
+}
+
+// ══════════════════════════════════════════
+//  SERVICE WORKER REGISTRATION
+// ══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((registration) => {
+        console.log('ServiceWorker registration successful');
+      })
+      .catch((error) => {
+        console.log('ServiceWorker registration failed: ', error);
+      });
+  });
 }
 </script>
 </body>
