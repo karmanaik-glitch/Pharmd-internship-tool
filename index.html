@@ -1454,11 +1454,59 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ══════════════════════════════════════════
+//  MULTI-DEVICE SYNC (FETCH FROM SERVER)
+// ══════════════════════════════════════════
+async function fetchServerData() {
+  // Only fetch if online, URL is set, and the offline queue is empty 
+  // (we don't want to overwrite local changes that haven't been pushed yet)
+  if (!navigator.onLine || !API_URL || API_URL === "PASTE_YOUR_URL_HERE" || DB.queue.length > 0) return;
+
+  setBanner('syncing', 'Downloading latest records from Sheets...');
+  
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const data = await response.json();
+    
+    // Google Sheets returns empty arrays if the sheet is blank, 
+    // so we only update if we actually get valid data back.
+    if (data.patients) DB.patients = data.patients;
+    if (data.preRounds) DB.preRound = data.preRounds;
+    if (data.medRecs) DB.medRec = data.medRecs;
+    
+    // Save the fresh server data to local storage
+    DB.save();
+    
+    // Re-render the UI with the new data
+    if (activePage === 'dashboard') renderDashboard();
+    if (activePage === 'records') renderRecords();
+    if (activePage === 'stats') renderStats();
+    if (activePage === 'detail') renderDetail(selectedMRD);
+    
+    setBanner('', '');
+    
+  } catch (error) {
+    console.error('Failed to fetch from server:', error);
+    setBanner('offline', '⚠ Could not reach server — using local data');
+    setTimeout(() => setBanner('', ''), 3000);
+  }
+}
+
+// ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 renderDashboard();
-if (navigator.onLine && DB.queue.length > 0) setTimeout(() => DB.flushQueue(), 1200);
+
+// 1. Flush any pending offline uploads first
+if (navigator.onLine && DB.queue.length > 0) {
+  setTimeout(() => DB.flushQueue(), 1000);
+} 
+// 2. Or, if the queue is empty, download the latest data from other devices
+else {
+  fetchServerData();
+}
 </script>
 </body>
 </html>
