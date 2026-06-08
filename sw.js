@@ -1,64 +1,68 @@
-const CACHE_NAME = 'pharmround-cache-v1';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'pharmround-v2';
+
+// The essential files your app needs to load when offline
+const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  // Add any local icon files here:
-  // './icon-192.png',
-  // './icon-512.png'
+  './manifest.json'
+  // If you added app icons, add them here (e.g., './icon-192.png')
 ];
 
-// Install Event: Cache the app shell
+// 1. INSTALL EVENT - Caches the static UI
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Opened cache');
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('[Service Worker] Caching App Shell');
+      return cache.addAll(STATIC_ASSETS);
     })
   );
+  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
-// Activate Event: Clean up old caches if the version changes
+// 2. ACTIVATE EVENT - Cleans up old caches when you update the app
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            console.log('Deleting old cache:', name);
-            return caches.delete(name);
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            console.log('[Service Worker] Clearing Old Cache:', cache);
+            return caches.delete(cache);
           }
         })
       );
     })
   );
+  // Claim all clients immediately so updates apply right away
   self.clients.claim();
 });
 
-// Fetch Event: Serve from cache first, then fall back to network
+// 3. FETCH EVENT - Intercepts network requests
 self.addEventListener('fetch', (event) => {
-  // 1. Always ignore POST requests (like when we upload the queue)
-  if (event.request.method !== 'GET') return;
-
-  // 2. EXPLICIT BYPASS: Never intercept calls to your Google Apps Script API
-  // This ensures the app always gets fresh data from Sheets, never a cached version
-  if (event.request.url.includes('script.google.com') || event.request.url.includes('script.googleusercontent.com')) {
-    return; // Let the browser handle this request normally over the network
+  // CRITICAL: Ignore Google Apps Script API calls! 
+  // We want these to always try the network and fail gracefully so your local DB queue handles them.
+  if (event.request.url.includes('script.google.com')) {
+    return; // Let the browser handle it normally
   }
 
-  // 3. For everything else (HTML, icons), check the cache first
+  // For the UI and layout (HTML, Manifest), use a "Stale-While-Revalidate" strategy
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Return the cached file if found (instant offline load)
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      
-      // Otherwise, fetch from the network
-      return fetch(event.request).then((networkResponse) => {
+      const networkFetch = fetch(event.request).then((networkResponse) => {
+        // Update the cache with the newest version behind the scenes
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
         return networkResponse;
+      }).catch((err) => {
+        // If network fails (offline), just return what we have in the cache silently
+        console.log('[Service Worker] Network fetch failed, serving from cache:', event.request.url);
       });
+
+      // Instantly return the cached version if we have it, otherwise wait for the network
+      return cachedResponse || networkFetch;
     })
   );
 });
