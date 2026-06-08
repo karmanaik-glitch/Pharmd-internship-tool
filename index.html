@@ -419,16 +419,20 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-label">Medication Review</div><div class="toggle-sub">All medicines checked</div></div>
-          <label class="toggle"><input type="checkbox" id="pr-medrv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+          <div class="toggle-info"><div class="toggle-label">Medication chart review</div><div class="toggle-sub">All medicines checked</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-medchart"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
         </div>
         <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-label">Clinical Review</div><div class="toggle-sub">Patient status assessed</div></div>
-          <label class="toggle"><input type="checkbox" id="pr-clrv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+          <div class="toggle-info"><div class="toggle-label">Vitals checked</div><div class="toggle-sub">Patient vitals assessed</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-vitals"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
         </div>
         <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-label">Intervention Identified</div><div class="toggle-sub">Pharmacist action required</div></div>
-          <label class="toggle"><input type="checkbox" id="pr-intv"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+          <div class="toggle-info"><div class="toggle-label">Lab reports reviewed</div><div class="toggle-sub">Recent labs evaluated</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-labs"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="toggle-wrap">
+          <div class="toggle-info"><div class="toggle-label">Flag interventions</div><div class="toggle-sub">Pharmacist action required</div></div>
+          <label class="toggle"><input type="checkbox" id="pr-flag"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
         </div>
       </div>
       <div class="form-group">
@@ -605,7 +609,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 
 <script>
 // 👇 PASTE YOUR GOOGLE APPS SCRIPT (OR BACKEND) URL HERE 👇
-const API_URL = "https://script.google.com/macros/s/AKfycbyHm0_jRbkolaU6T8WHoycVLT6H1d-PrjT4SJf5eIgJ1CC2UdRYRhgE6YzQHjJUG57d/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbyU18jueWSKzjjfjUArYkLvxY3uRXRhkFo4RvjaxpRFZ2i-Ad-iIaAH4_w-IdmfcQiO/exec"; 
 
 // ══════════════════════════════════════════
 //  OFFLINE QUEUE & STORAGE ENGINE
@@ -905,7 +909,7 @@ function renderDashboard() {
     const mrAll    = DB.medRec.filter(x => x.MRD_NO === p.MRD_NO);
     const todayPR  = prAll.find(x => x.Date === todayStr());
     const hasDisc  = mrAll.some(x => x.Discrepancy_Found);
-    const hasIntv  = prAll.some(x => x.Intervention_identified);
+    const hasIntv  = prAll.some(x => x.Flag_Interventions); // Updated Reference
     const days     = losdays(p.Admission_Date);
     return `<div class="card card-pressable patient-card" style="animation-delay:${i*.04}s" onclick="openDetail('${esc(p.MRD_NO)}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -993,10 +997,12 @@ function renderStats() {
   const todayPR     = DB.preRound.filter(x => x.Date===td).length;
   const todayMR     = DB.medRec.filter(x => x.Date===td).length;
   const totalDisc   = DB.medRec.filter(x => x.Discrepancy_Found).length;
-  const totalIntv   = DB.preRound.filter(x => x.Intervention_identified).length;
-  const totalMedRv  = DB.preRound.filter(x => x.Medication_review).length;
-  const totalClRv   = DB.preRound.filter(x => x.Clinical_review).length;
   const pctReviewed = admitted ? Math.round(DB.patients.filter(p=>p.Status==='Admitted'&&DB.preRound.some(x=>x.MRD_NO===p.MRD_NO&&x.Date===td)).length / admitted * 100) : 0;
+
+  // Updated Data References
+  const totalIntv   = DB.preRound.filter(x => x.Flag_Interventions).length;
+  const totalMedRv  = DB.preRound.filter(x => x.Medication_Chart_Review).length;
+  const totalVitals = DB.preRound.filter(x => x.Vitals_Checked).length;
 
   const discTypes = {};
   DB.medRec.forEach(m => { if (m.Discrepancy_Found && m.Discrepancy_type) { discTypes[m.Discrepancy_type] = (discTypes[m.Discrepancy_type]||0) + 1; } });
@@ -1009,7 +1015,7 @@ function renderStats() {
 
   document.getElementById('stats-content').innerHTML = `
     <div class="section-label">Patient Census</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="sum-card"><div class="sum-val" style="color:var(--accent)">${admitted}</div><div class="sum-label">Active</div></div>
       <div class="sum-card"><div class="sum-val">${total}</div><div class="sum-label">Total</div></div>
       <div class="sum-card"><div class="sum-val" style="color:var(--blue)">${discharged}</div><div class="sum-label">Discharged</div></div>
@@ -1066,8 +1072,8 @@ function renderStats() {
         <span style="font-size:22px;font-weight:700;color:var(--accent)">${totalMedRv}</span>
       </div>
       <div class="toggle-wrap" style="cursor:default;border:none">
-        <div class="toggle-info"><div class="toggle-label">Clinical Reviews Done</div><div class="toggle-sub">All pre-round entries</div></div>
-        <span style="font-size:22px;font-weight:700;color:var(--blue)">${totalClRv}</span>
+        <div class="toggle-info"><div class="toggle-label">Vitals Checked</div><div class="toggle-sub">All pre-round entries</div></div>
+        <span style="font-size:22px;font-weight:700;color:var(--blue)">${totalVitals}</span>
       </div>
     </div>
 
@@ -1108,9 +1114,10 @@ function renderDetail(mrd) {
       <div class="log-entry">
         <div class="log-date">${formatDate(e.Date)}</div>
         <div class="log-chips">
-          <span class="chip ${e.Medication_review?'chip-yes':'chip-no'}">💊 Med ${e.Medication_review?'✓':'✗'}</span>
-          <span class="chip ${e.Clinical_review?'chip-yes':'chip-no'}">🩺 Clinical ${e.Clinical_review?'✓':'✗'}</span>
-          <span class="chip ${e.Intervention_identified?'chip-flag':'chip-no'}">⚡ Intervention ${e.Intervention_identified?'Yes':'No'}</span>
+          <span class="chip ${e.Medication_Chart_Review?'chip-yes':'chip-no'}">💊 Med Chart ${e.Medication_Chart_Review?'✓':'✗'}</span>
+          <span class="chip ${e.Vitals_Checked?'chip-yes':'chip-no'}">🩺 Vitals ${e.Vitals_Checked?'✓':'✗'}</span>
+          <span class="chip ${e.Lab_Reports_Reviewed?'chip-yes':'chip-no'}">🧪 Labs ${e.Lab_Reports_Reviewed?'✓':'✗'}</span>
+          <span class="chip ${e.Flag_Interventions?'chip-flag':'chip-no'}">⚡ Intervention ${e.Flag_Interventions?'Yes':'No'}</span>
         </div>
         ${e.Comments ? `<div class="log-comment">${esc(e.Comments)}</div>` : ''}
       </div>`).join('');
@@ -1260,26 +1267,28 @@ function savePatient() {
 }
 
 // ══════════════════════════════════════════
-//  PRE-ROUND
+//  PRE-ROUND (UPDATED LOGIC)
 // ══════════════════════════════════════════
 function openPreRound(mrd) {
   selectedMRD = mrd;
   document.getElementById('preround-mrd-label').textContent = mrd;
   document.getElementById('pr-date').value = todayStr();
-  document.getElementById('pr-medrv').checked = false;
-  document.getElementById('pr-clrv').checked  = false;
-  document.getElementById('pr-intv').checked  = false;
+  document.getElementById('pr-medchart').checked = false;
+  document.getElementById('pr-vitals').checked  = false;
+  document.getElementById('pr-labs').checked  = false;
+  document.getElementById('pr-flag').checked  = false;
   document.getElementById('pr-comments').value = '';
   openPanel('panel-preround');
 }
 function savePreRound() {
   const entry = {
-    Date:                   document.getElementById('pr-date').value,
-    MRD_NO:                 selectedMRD,
-    Medication_review:      document.getElementById('pr-medrv').checked,
-    Clinical_review:        document.getElementById('pr-clrv').checked,
-    Intervention_identified:document.getElementById('pr-intv').checked,
-    Comments:               document.getElementById('pr-comments').value.trim()
+    Date:                    document.getElementById('pr-date').value,
+    MRD_NO:                  selectedMRD,
+    Medication_Chart_Review: document.getElementById('pr-medchart').checked,
+    Vitals_Checked:          document.getElementById('pr-vitals').checked,
+    Lab_Reports_Reviewed:    document.getElementById('pr-labs').checked,
+    Flag_Interventions:      document.getElementById('pr-flag').checked,
+    Comments:                document.getElementById('pr-comments').value.trim()
   };
   DB.preRound.push(entry);
   DB.save();
@@ -1398,7 +1407,7 @@ function confirmDeletePatient() {
 }
 
 // ══════════════════════════════════════════
-//  EXPORT
+//  EXPORT (UPDATED PRE-ROUND HEADERS)
 // ══════════════════════════════════════════
 function toCSV(rows, headers) {
   const escape = v => {
@@ -1422,7 +1431,7 @@ function exportCSV(table) {
     const hdrs = ['Date','MRD_NO','Ward_Bed','Age','Primary_Diagnosis','Admission_Date','Discharge_Date','Status'];
     downloadFile(toCSV(DB.patients, hdrs), `patients_${dateStr}.csv`);
   } else if (table === 'preround') {
-    const hdrs = ['Date','MRD_NO','Medication_review','Clinical_review','Intervention_identified','Comments'];
+    const hdrs = ['Date','MRD_NO','Medication_Chart_Review','Vitals_Checked','Lab_Reports_Reviewed','Flag_Interventions','Comments'];
     downloadFile(toCSV(DB.preRound, hdrs), `preround_${dateStr}.csv`);
   } else if (table === 'medrec') {
     const hdrs = ['Date','MRD_NO','Admission_medicine_reconciliation','Discharge_medicine_reconciliation','Interdepartment_Transfer_Medicine_Reconciliation','Discrepancy_Found','Discrepancy_type','Action_taken'];
